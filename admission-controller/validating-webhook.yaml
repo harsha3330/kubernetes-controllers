@@ -1,0 +1,18 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: deployment-validation
+webhooks:
+  - name: deployment-validation.webhook.ngrok.io
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        resources: ["deployments"]
+        scope: "Namespaced"
+    clientConfig:
+      url: "https://nonspeculative-riley-semiclinical.ngrok-free.dev/validate/deployment"
+      caBundle: ""
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 5

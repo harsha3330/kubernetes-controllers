@@ -1,0 +1,1 @@
+1. Create a validating webhook to not allow pulbic docker images and latest docker images 
