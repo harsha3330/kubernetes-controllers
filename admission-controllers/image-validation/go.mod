@@ -1,4 +1,4 @@
-module github.com/harsha3330/kubernetes/admission-controller
+module github.com/harsha3330/kubernetes/admission-controller/image-validation
 
 go 1.25.1
 
