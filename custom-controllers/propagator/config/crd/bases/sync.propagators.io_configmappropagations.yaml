@@ -61,7 +61,6 @@ spec:
                 - Orphan
                 type: string
               namespaceSelector:
-                default: {}
                 description: |-
                   NamespaceSelector selects namespaces where the target ConfigMap
                   should be propagated.
@@ -189,9 +188,20 @@ spec:
           status:
             description: status defines the observed state of ConfigMapPropagation
             properties:
+              checkSum:
+                description: |-
+                  CheckSum represents the checksum of the desired state (derived from
+                  source ConfigMap data + propagation policy). Used to quickly detect if
+                  the desired state has changed between reconciliations.
+                type: string
               conditions:
-                description: The status of each condition is one of True, False, or
-                  Unknown.
+                description: |-
+                  Conditions follow the standard Kubernetes conditions pattern.
+                  Common types:
+                  - Ready:    "True" when all targets are synced successfully
+                  - Error:    "True" when an unrecoverable issue exists
+
+                  This list uses a map-style structure for efficient updates.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -250,6 +260,85 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              lastSyncedAt:
+                description: |-
+                  LastSyncedAt is the timestamp of the most recent reconciliation attempt
+                  (successful or failed). Useful for knowing controller liveness.
+                format: date-time
+                type: string
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the metadata.generation that the controller
+                  has last fully reconciled. Ensures users know the Status reflects
+                  the latest Spec.
+                format: int64
+                type: integer
+              targetStatuses:
+                description: |-
+                  TargetStatuses contains detailed per-target records ONLY for targets that
+                  failed, drifted, or were skipped. Healthy ones are omitted to avoid bloating
+                  the CR in large clusters.
+                items:
+                  description: |-
+                    TargetStatus represents the sync condition of a single target ConfigMap.
+                    Only include entries for failures, drift, or skipped targets to keep the
+                    status compact and readable.
+                  properties:
+                    message:
+                      description: |-
+                        Message is a human-readable explanation describing the issue or action taken.
+                        Typically contains error details or drift description.
+                      type: string
+                    name:
+                      description: Name of the target ConfigMap.
+                      minLength: 1
+                      type: string
+                    namespace:
+                      description: Namespace of the target ConfigMap.
+                      minLength: 1
+                      type: string
+                    reason:
+                      description: |-
+                        Reason is a short machine-friendly code providing context for State.
+                        Examples: "PermissionDenied", "DriftDetected", "NotFound".
+                      type: string
+                    state:
+                      description: |-
+                        State represents the controller's result for this specific target.
+                        Common values:
+                        - "Synced"   : successfully reconciled
+                        - "Failed"   : update or creation error occurred
+                        - "Drifted"  : manual modifications detected
+                        - "Skipped"  : skipped due to CreateOnce or missing permissions
+                      minLength: 1
+                      type: string
+                  required:
+                  - name
+                  - namespace
+                  - state
+                  type: object
+                type: array
+              targetsSummary:
+                description: |-
+                  TargetsSummary gives a compressed overview of how many targets succeeded
+                  or failed during reconciliation.
+                properties:
+                  failed:
+                    description: Number of targets that failed due to drift, permissions,
+                      or update errors.
+                    format: int32
+                    type: integer
+                  synced:
+                    description: Number of targets that reached the desired state
+                      successfully.
+                    format: int32
+                    type: integer
+                  total:
+                    description: Total number of target namespaces evaluated for this
+                      propagation.
+                    format: int32
+                    type: integer
+                type: object
             type: object
         required:
         - spec

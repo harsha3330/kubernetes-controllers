@@ -101,7 +101,6 @@ type ConfigMapPropagationSpec struct {
 	//       team: backend
 	//
 	// Use Empty Object to match all namespaces example: namespaceSelector: {}
-	// +kubebuilder:default={}
 	// +optional
 	NamespacSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 
@@ -147,13 +146,90 @@ type ConfigMapPropagationSpec struct {
 	AllowSystemNamespaces bool `json:"allowSystemNamespaces,omitempty"`
 }
 
+// targetsSummary tells the aggregated result of the reconciliation.
+// Useful for operators to quickly understand how many targets succeeded or failed
+// without expanding the full TargetStatuses list.
+type TargetsSummary struct {
+	// Total number of target namespaces evaluated for this propagation.
+	Total int32 `json:"total,omitempty"`
+
+	// Number of targets that reached the desired state successfully.
+	Synced int32 `json:"synced,omitempty"`
+
+	// Number of targets that failed due to drift, permissions, or update errors.
+	Failed int32 `json:"failed,omitempty"`
+}
+
+// TargetStatus represents the sync condition of a single target ConfigMap.
+// Only include entries for failures, drift, or skipped targets to keep the
+// status compact and readable.
+type TargetStatus struct {
+	// Namespace of the target ConfigMap.
+	// +kubebuilder:validation:MinLength=1
+	Namespace string `json:"namespace"`
+
+	// Name of the target ConfigMap.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// State represents the controller's result for this specific target.
+	// Common values:
+	// - "Synced"   : successfully reconciled
+	// - "Failed"   : update or creation error occurred
+	// - "Drifted"  : manual modifications detected
+	// - "Skipped"  : skipped due to CreateOnce or missing permissions
+	// +kubebuilder:validation:MinLength=1
+	State string `json:"state"`
+
+	// Reason is a short machine-friendly code providing context for State.
+	// Examples: "PermissionDenied", "DriftDetected", "NotFound".
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// Message is a human-readable explanation describing the issue or action taken.
+	// Typically contains error details or drift description.
+	// +optional
+	Message string `json:"message,omitempty"`
+}
+
 // ConfigMapPropagationStatus defines the observed state of ConfigMapPropagation.
+// Status reflects what the controller last observed and is used for debugging,
+// reporting health, and showing aggregated results.
 type ConfigMapPropagationStatus struct {
-	// The status of each condition is one of True, False, or Unknown.
+	// Conditions follow the standard Kubernetes conditions pattern.
+	// Common types:
+	// - Ready:    "True" when all targets are synced successfully
+	// - Error:    "True" when an unrecoverable issue exists
+	//
+	// This list uses a map-style structure for efficient updates.
 	// +listType=map
 	// +listMapKey=type
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// ObservedGeneration is the metadata.generation that the controller
+	// has last fully reconciled. Ensures users know the Status reflects
+	// the latest Spec.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// LastSyncedAt is the timestamp of the most recent reconciliation attempt
+	// (successful or failed). Useful for knowing controller liveness.
+	LastSyncedAt metav1.Time `json:"lastSyncedAt,omitempty"`
+
+	// CheckSum represents the checksum of the desired state (derived from
+	// source ConfigMap data + propagation policy). Used to quickly detect if
+	// the desired state has changed between reconciliations.
+	CheckSum string `json:"checkSum,omitempty"`
+
+	// TargetsSummary gives a compressed overview of how many targets succeeded
+	// or failed during reconciliation.
+	TargetsSummary TargetsSummary `json:"targetsSummary,omitempty"`
+
+	// TargetStatuses contains detailed per-target records ONLY for targets that
+	// failed, drifted, or were skipped. Healthy ones are omitted to avoid bloating
+	// the CR in large clusters.
+	// +optional
+	TargetStatuses []TargetStatus `json:"targetStatuses,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -27,4 +27,28 @@ spec:
   createIfMissing: true           # create ConfigMaps in matched namespaces if missing
   allowSystemNamespaces: false
 status:
+  conditions:
+    - type: Ready
+      status: "False"
+      reason: "OneOrMoreTargetsFailed"
+      message: "See targetStatuses for details"
+      lastTransitionTime: "2025-11-29T08:12:03Z"
+
+  lastSyncedAt: "2025-11-29T08:12:03Z"
+  observedGeneration: 3
+  checksum: "sha256:aaa111..."
+
+  targetsSummary:
+    total: 25
+    synced: 24
+    failed: 1
+
+  targetStatuses:
+    - namespace: team-x
+      name: app-config
+      state: Error
+      reason: PermissionDenied
+      message: "User system:serviceaccount:... is forbidden"
+      lastUpdated: "2025-11-29T08:12:03Z"
+
   
