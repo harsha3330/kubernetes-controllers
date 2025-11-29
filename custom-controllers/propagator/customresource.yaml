@@ -13,17 +13,18 @@ spec:
   targets:
     - namespace: payments
       name: app-config
-      createIfMissing: false # Defaults to true
     - namespace: billing
       name: app-config
-      createIfMissing: true 
 
   # Namespace Selector
   namespaceSelector: {}       
 
   # Behavior controls
   propagationPolicy: Merge        # Merge | Overwrite
+  deletionPolicy: Delete.         # Delete | Orphan
   syncMode: OnChange              # CreateOnce | OnChange | Periodic
-  interval: 5m                    # used if Periodic or as a fallback
-  globalCreateIfMissing: true     # create ConfigMaps in matched namespaces if missing
-  allowSystemNamespaces: false    # must be explicit to touch kube-system, etc.
+  syncInterval: 5m                # used if Periodic or as a fallback
+  createIfMissing: true           # create ConfigMaps in matched namespaces if missing
+  allowSystemNamespaces: false
+status:
+  

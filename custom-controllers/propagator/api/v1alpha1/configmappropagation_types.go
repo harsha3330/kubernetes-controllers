@@ -20,37 +20,135 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// PropagationSource defines the Input Configmap for creating targets
+type PropagationSource struct {
+	// Name of the Configmap
+	// +kubebuilder:validation:MinLength:=1
+	// +kubebuilder:validation:MaxLength:=253
+	// +kubebuilder:validation:Pattern:=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// Namespace of the configmap
+	// +kubebuilder:default="default"
+	// +optional
+	Namespace string `json:"namespace"`
+}
+
+type TargetRef struct {
+	// Namespace where the propagated ConfigMap should be created/updated.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Required
+	Namespace string `json:"namespace"`
+
+	// Name of the target ConfigMap. If not provided, defaults to source name.
+	// +optional
+	Name string `json:"name,omitempty"`
+}
+
+// SyncMode defines how and when the Configmaps should be refreshed.
+// +kubebuilder:validation:Enum=CreatedOnce;Periodic;OnChange
+type SyncMode string
+
+const (
+	// SyncModeCreatedOnce creates the Configmap once and does not update it thereafter.
+	SyncModeCreatedOnce SyncMode = "CreatedOnce"
+	// SyncModePeriodic synchronizes the Configmap from the provider at regular intervals.
+	SyncModePeriodic SyncMode = "Periodic"
+	// SyncModeOnChange only synchronizes when the Configmap's metadata or spec changes.
+	SyncModeOnChange SyncMode = "OnChange"
+)
+
+// Deletion Policy determines the state of target Configmaps when the source Configmap is deleted.
+// +kubebuilder:validation:Enum=Delete;Orphan
+type DeletionPolicy string
+
+const (
+	// PolicyDelete deletes the target configmap after the source is deleted
+	DeletionPolicyDelete DeletionPolicy = "Delete"
+
+	// PolicyDelete does not delete the target configmap after the source is deleted
+	DeletionPolicyOrphan DeletionPolicy = "Orphan"
+)
+
+// PropagationPolicy determines how to pass in keys to the target Configmap.
+// +kubebuilder:validation:Enum=Merge;Overwrite
+type PropagationPolicy string
+
+const (
+	// PolicyDelete deletes the target configmap after the source is deleted
+	PropagationPolicyMerge PropagationPolicy = "Merge"
+
+	// PolicyDelete does not delete the target configmap after the source is deleted
+	PropagationPolicyOverwrite PropagationPolicy = "Overwrite"
+)
 
 // ConfigMapPropagationSpec defines the desired state of ConfigMapPropagation
 type ConfigMapPropagationSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// The following markers will use OpenAPI v3 schema to validate the value
-	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
+	// PropagationSource Defines the input for Propagation
+	// Input the Configmap's name and namespace
+	// If Namespace is not given , default namespace will be taken as input
+	// +kubebuilder:validation:Required
+	Source PropagationSource `json:"source"`
 
-	// foo is an example field of ConfigMapPropagation. Edit configmappropagation_types.go to remove/update
+	// NamespaceSelector selects namespaces where the target ConfigMap
+	// should be propagated.
+	//
+	// This reuses standard Kubernetes LabelSelector.
+	// Example:
+	//   namespaceSelector:
+	//     matchLabels:
+	//       team: backend
+	//
+	// Use Empty Object to match all namespaces example: namespaceSelector: {}
+	// +kubebuilder:default={}
 	// +optional
-	Foo *string `json:"foo,omitempty"`
+	NamespacSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+
+	// Explicit list of target namespaces/ConfigMaps.
+	// +optional
+	Targets []TargetRef `json:"targets,omitempty"`
+
+	// DeletionPolicy tell what to do about the target configmap when the configmap is deleted
+	// - Delete: Deletes the target ConfigMaps
+	// - Orphan: Does not delete the target ConfigMaps
+	// +kubebuilder:default="Delete"
+	DeletionPolicy DeletionPolicy `json:"deletionPolicy,omitempty"`
+
+	// SyncMode determines how the Confimaps should be refreshed:
+	// - CreatedOnce: Creates the Configmap only if it does not exist and does not update it thereafter
+	// - Periodic: Synchronizes the Configmap from the external source at regular intervals specified by refreshInterval.
+	//   No periodic updates occur if refreshInterval is 0.
+	// - OnChange: Only synchronizes the Secret when the Configmap's metadata or specification changes
+	// +kubebuilder:default="OnChange"
+	// +optional
+	SyncMode SyncMode `json:"syncMode,omitempty"`
+
+	// SyncInterval determines how often to sync the target Configmap
+	// Only Used when syncmode is periodic
+	// +kubebuilder:default="5m"
+	// +optional
+	SyncInterval *metav1.Duration `json:"syncInterval,omitempty"`
+
+	// GlobalCreateIfMissing determines whether to create a target Configmap when the configmap is not present
+	// +kubebuilder:default=true
+	// +kubebuilder:validation:Required
+	CreateIfMissing bool `json:"createIfMissing"`
+
+	// PropagationPolicy determines how the Confimaps should be refreshed:
+	// - Overwrite: Keeps the target and source in sync and deletes the extra keys (Absolute Mirror)
+	// - Merge: Add the keys without deleting the extra keys
+	// +kubebuilder:default="Merge"
+	// +optional
+	PropagationPolicy PropagationPolicy `json:"propagationPolicy,omitempty"`
+
+	// AllowSystem Namespaces determines if propagator needs to target System Namespace
+	// +kubebuilder:default=true
+	AllowSystemNamespaces bool `json:"allowSystemNamespaces,omitempty"`
 }
 
 // ConfigMapPropagationStatus defines the observed state of ConfigMapPropagation.
 type ConfigMapPropagationStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// For Kubernetes API conventions, see:
-	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
-
-	// conditions represent the current state of the ConfigMapPropagation resource.
-	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
-	//
-	// Standard condition types include:
-	// - "Available": the resource is fully functional
-	// - "Progressing": the resource is being created or updated
-	// - "Degraded": the resource failed to reach or maintain its desired state
-	//
 	// The status of each condition is one of True, False, or Unknown.
 	// +listType=map
 	// +listMapKey=type
