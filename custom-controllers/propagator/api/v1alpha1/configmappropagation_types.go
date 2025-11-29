@@ -234,7 +234,13 @@ type ConfigMapPropagationStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-
+// +kubebuilder:metadata:labels="propagators.io/component=controller"
+// +kubebuilder:resource:scope=Namespaced,categories={propagators}
+// +kubebuilder:printcolumn:name="Source",type=string,JSONPath=`.spec.source.name`
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
+// +kubebuilder:selectablefield:JSONPath=`.spec.source.name`
+// +kubebuilder:selectablefield:JSONPath=`.spec.source.namespace`
 // ConfigMapPropagation is the Schema for the configmappropagations API
 type ConfigMapPropagation struct {
 	metav1.TypeMeta `json:",inline"`

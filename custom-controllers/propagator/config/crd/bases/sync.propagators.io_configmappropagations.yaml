@@ -4,17 +4,31 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
+  labels:
+    propagators.io/component: controller
   name: configmappropagations.sync.propagators.io
 spec:
   group: sync.propagators.io
   names:
+    categories:
+    - propagators
     kind: ConfigMapPropagation
     listKind: ConfigMapPropagationList
     plural: configmappropagations
     singular: configmappropagation
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.source.name
+      name: Source
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].reason
+      name: Status
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: ConfigMapPropagation is the Schema for the configmappropagations
@@ -343,6 +357,9 @@ spec:
         required:
         - spec
         type: object
+    selectableFields:
+    - jsonPath: .spec.source.name
+    - jsonPath: .spec.source.namespace
     served: true
     storage: true
     subresources:
