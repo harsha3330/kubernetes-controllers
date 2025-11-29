@@ -8,4 +8,14 @@ layout:
 - go.kubebuilder.io/v4
 projectName: propagator
 repo: github.com/harsha3330/kubernetes/custom-controllers/propagator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: propagators.io
+  group: sync
+  kind: ConfigMapPropagation
+  path: github.com/harsha3330/kubernetes/custom-controllers/propagator/api/v1alpha1
+  version: v1alpha1
 version: "3"

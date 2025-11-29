@@ -1,0 +1,9 @@
+apiVersion: sync.propagators.io/v1alpha1
+kind: ConfigMapPropagation
+metadata:
+  labels:
+    app.kubernetes.io/name: propagator
+    app.kubernetes.io/managed-by: kustomize
+  name: configmappropagation-sample
+spec:
+  # TODO(user): Add fields here
