@@ -102,7 +102,7 @@ type ConfigMapPropagationSpec struct {
 	//
 	// Use Empty Object to match all namespaces example: namespaceSelector: {}
 	// +optional
-	NamespacSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 
 	// Explicit list of target namespaces/ConfigMaps.
 	// +optional
