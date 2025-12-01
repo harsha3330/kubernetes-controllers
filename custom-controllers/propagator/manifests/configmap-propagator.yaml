@@ -1,0 +1,25 @@
+apiVersion: sync.propagators.io/v1alpha1
+kind: ConfigMapPropagation
+metadata:
+  name: propagate-example-configmap
+  namespace: default
+  labels:
+    app: configmap-propagator
+spec:
+  createIfMissing: true
+  source:
+    name: example-configmap
+    namespace: default
+  propagationPolicy: Merge
+  syncMode: OnChange
+  syncInterval: 5m
+  deletionPolicy: Delete
+  allowSystemNamespaces: true
+  targets:
+    - namespace: dev
+      name: example-configmap
+    - namespace: staging
+      name: example-configmap
+    - namespace: prod
+      name: example-configmap
+
