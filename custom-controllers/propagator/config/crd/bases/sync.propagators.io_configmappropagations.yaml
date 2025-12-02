@@ -202,12 +202,6 @@ spec:
           status:
             description: status defines the observed state of ConfigMapPropagation
             properties:
-              checkSum:
-                description: |-
-                  CheckSum represents the checksum of the desired state (derived from
-                  source ConfigMap data + propagation policy). Used to quickly detect if
-                  the desired state has changed between reconciliations.
-                type: string
               conditions:
                 description: |-
                   Conditions follow the standard Kubernetes conditions pattern.
@@ -337,19 +331,24 @@ spec:
                   TargetsSummary gives a compressed overview of how many targets succeeded
                   or failed during reconciliation.
                 properties:
-                  failed:
-                    description: Number of targets that failed due to drift, permissions,
-                      or update errors.
+                  created:
                     format: int32
                     type: integer
-                  synced:
-                    description: Number of targets that reached the desired state
-                      successfully.
+                  deleted:
+                    format: int32
+                    type: integer
+                  failed:
+                    format: int32
+                    type: integer
+                  orphaned:
                     format: int32
                     type: integer
                   total:
                     description: Total number of target namespaces evaluated for this
-                      propagation.
+                      propagation in the last sync.
+                    format: int32
+                    type: integer
+                  updated:
                     format: int32
                     type: integer
                 type: object

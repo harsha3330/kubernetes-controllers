@@ -150,13 +150,17 @@ type ConfigMapPropagationSpec struct {
 // Useful for operators to quickly understand how many targets succeeded or failed
 // without expanding the full TargetStatuses list.
 type TargetsSummary struct {
-	// Total number of target namespaces evaluated for this propagation.
+	// Total number of target namespaces evaluated for this propagation in the last sync.
 	Total int32 `json:"total,omitempty"`
 
-	// Number of targets that reached the desired state successfully.
-	Synced int32 `json:"synced,omitempty"`
+	Created int32 `json:"created,omitempty"`
 
-	// Number of targets that failed due to drift, permissions, or update errors.
+	Updated int32 `json:"updated,omitempty"`
+
+	Deleted int32 `json:"deleted,omitempty"`
+
+	Orphaned int32 `json:"orphaned,omitempty"`
+
 	Failed int32 `json:"failed,omitempty"`
 }
 
@@ -215,11 +219,6 @@ type ConfigMapPropagationStatus struct {
 	// LastSyncedAt is the timestamp of the most recent reconciliation attempt
 	// (successful or failed). Useful for knowing controller liveness.
 	LastSyncedAt metav1.Time `json:"lastSyncedAt,omitempty"`
-
-	// CheckSum represents the checksum of the desired state (derived from
-	// source ConfigMap data + propagation policy). Used to quickly detect if
-	// the desired state has changed between reconciliations.
-	CheckSum string `json:"checkSum,omitempty"`
 
 	// TargetsSummary gives a compressed overview of how many targets succeeded
 	// or failed during reconciliation.

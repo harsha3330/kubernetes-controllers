@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	syncv1alpha1 "github.com/harsha3330/kubernetes/custom-controllers/propagator/api/v1alpha1"
-	"github.com/harsha3330/kubernetes/custom-controllers/propagator/internal/controller"
+	cmpcontroller "github.com/harsha3330/kubernetes/custom-controllers/propagator/internal/controller/configmappropagation"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -178,7 +178,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controller.ConfigMapPropagationReconciler{
+	if err := (&cmpcontroller.ConfigMapPropagationReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
