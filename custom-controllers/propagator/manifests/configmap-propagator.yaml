@@ -1,10 +1,8 @@
 apiVersion: sync.propagators.io/v1alpha1
 kind: ConfigMapPropagation
 metadata:
-  name: propagate-example-configmap
+  name: propagate-configmap
   namespace: default
-  labels:
-    app: configmap-propagator
 spec:
   createIfMissing: true
   source:

@@ -3,10 +3,16 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	syncv1alpha1 "github.com/harsha3330/kubernetes/custom-controllers/propagator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (r *ConfigMapPropagationReconciler) SyncTargets(ctx context.Context, configmapPropagator *syncv1alpha1.ConfigMapPropagation) (ctrl.Result, error) {
@@ -70,7 +76,7 @@ func (r *ConfigMapPropagationReconciler) SyncTargets(ctx context.Context, config
 				Reason:    fmt.Sprintf("%v", err),
 				Message:   "Failed to Ensure the configmap",
 			})
-			r.Recorder.Eventf(configmapPropagator, corev1.EventTypeNormal, "CreatedFailed", "failed to create propagated ConfigMap %s/%s with error : %v", t.Namespace, t.ConfigmapName, err)
+			r.Recorder.Eventf(configmapPropagator, corev1.EventTypeNormal, "CreatedFailed", "%s/%s creation failed : %v", t.Namespace, t.ConfigmapName, err)
 		} else {
 			targetSummary.Created += 1
 		}
@@ -79,7 +85,7 @@ func (r *ConfigMapPropagationReconciler) SyncTargets(ctx context.Context, config
 
 	for _, t := range toUpdate {
 		if err := r.updateIfNeeded(ctx, configmapPropagator, t); err != nil {
-			r.Recorder.Eventf(configmapPropagator, corev1.EventTypeWarning, "UpdateFailed", "failed to update propagated ConfigMap %s/%s: %v", t.Namespace, t.ConfigmapName, err)
+			r.Recorder.Eventf(configmapPropagator, corev1.EventTypeWarning, "UpdateFailed", " %s/%s update failed: %v", t.Namespace, t.ConfigmapName, err)
 			targetStatuses = append(targetStatuses, syncv1alpha1.TargetStatus{
 				Namespace: t.Namespace,
 				Name:      t.ConfigmapName,
@@ -97,7 +103,7 @@ func (r *ConfigMapPropagationReconciler) SyncTargets(ctx context.Context, config
 		switch configmapPropagator.Spec.DeletionPolicy {
 		case "Delete":
 			if err := r.deleteConfigMap(ctx, t.Namespace, t.ConfigmapName); err != nil {
-				r.Recorder.Eventf(configmapPropagator, corev1.EventTypeWarning, "DeleteFailed", "failed to delete propagated ConfigMap %s/%s: %v", t.Namespace, t.ConfigmapName, err)
+				r.Recorder.Eventf(configmapPropagator, corev1.EventTypeWarning, "DeleteFailed", " %s/%s delete failed: %v", t.Namespace, t.ConfigmapName, err)
 				targetSummary.Failed += 1
 			} else {
 				targetSummary.Deleted += 1
@@ -106,26 +112,50 @@ func (r *ConfigMapPropagationReconciler) SyncTargets(ctx context.Context, config
 			r.Recorder.Eventf(configmapPropagator, corev1.EventTypeNormal, "DeletedTarget", "deleted propagated ConfigMap %s/%s", t.Namespace, t.ConfigmapName)
 		case "Orphan":
 			if err := r.orphanConfigMap(ctx, configmapPropagator, t.Namespace, t.ConfigmapName); err != nil {
-				r.Recorder.Eventf(configmapPropagator, corev1.EventTypeWarning, "OrphanFailed", "failed to orphan propagated ConfigMap %s/%s: %v", t.Namespace, t.ConfigmapName, err)
+				r.Recorder.Eventf(configmapPropagator, corev1.EventTypeWarning, "OrphanFailed", " %s/%s orphan failed: %v", t.Namespace, t.ConfigmapName, err)
 				targetSummary.Failed += 1
 			} else {
 				targetSummary.Orphaned += 1
 			}
 			targetSummary.Total += 1
-			r.Recorder.Eventf(configmapPropagator, corev1.EventTypeNormal, "OrphanedTarget", "orphaned propagated ConfigMap %s/%s", t.Namespace, t.ConfigmapName)
+			r.Recorder.Eventf(configmapPropagator, corev1.EventTypeNormal, "OrphanedTarget", "Orphaned propagated ConfigMap %s/%s", t.Namespace, t.ConfigmapName)
 		}
 	}
 
-	configmapPropagator.Status.TargetsSummary = targetSummary
-	configmapPropagator.Status.TargetStatuses = targetStatuses
+	updateCmp := configmapPropagator.DeepCopy()
 
-	err = r.Client.Update(ctx, configmapPropagator)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("Failed to Update the Status of ConfigMapPropagator")
+	updateCmp.Status.TargetsSummary = targetSummary
+	updateCmp.Status.TargetStatuses = targetStatuses
+	updateCmp.Status.LastSyncedAt = metav1.NewTime(time.Now())
+	updateCmp.Status.ObservedGeneration = configmapPropagator.Generation
+	if targetSummary.Failed > 0 {
+		failedParts := make([]string, 0, len(targetStatuses))
+		for _, t := range targetStatuses {
+			failedParts = append(failedParts, fmt.Sprintf("%s/%s", t.Namespace, t.Name))
+		}
+		meta.SetStatusCondition(&updateCmp.Status.Conditions, metav1.Condition{
+			Type:    "UnReady",
+			Status:  metav1.ConditionFalse,
+			Reason:  "SyncFailed",
+			Message: fmt.Sprintf("Sync Failed for: %s", strings.Join(failedParts, ",")),
+		})
+	} else {
+		meta.SetStatusCondition(&updateCmp.Status.Conditions, metav1.Condition{
+			Type:    "Ready",
+			Status:  metav1.ConditionTrue,
+			Reason:  "Synced",
+			Message: "All Objects have been synced",
+		})
+	}
+
+	if !equality.Semantic.DeepEqual(configmapPropagator.Status, updateCmp.Status) {
+		if err := r.Status().Patch(ctx, updateCmp, client.MergeFrom(configmapPropagator)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update the status of configmappropagator")
+		}
 	}
 
 	if targetSummary.Failed > 0 {
-		return ctrl.Result{}, fmt.Errorf("Failed to Sync the Targets")
+		return ctrl.Result{}, fmt.Errorf("failed to sync the targets")
 	}
 
 	return ctrl.Result{}, nil
