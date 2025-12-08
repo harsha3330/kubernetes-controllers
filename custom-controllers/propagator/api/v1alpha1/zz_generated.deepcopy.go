@@ -126,6 +126,7 @@ func (in *ConfigMapPropagationStatus) DeepCopyInto(out *ConfigMapPropagationStat
 		}
 	}
 	in.LastSyncedAt.DeepCopyInto(&out.LastSyncedAt)
+	in.LastSuccessfulSync.DeepCopyInto(&out.LastSuccessfulSync)
 	out.TargetsSummary = in.TargetsSummary
 	if in.TargetStatuses != nil {
 		in, out := &in.TargetStatuses, &out.TargetStatuses

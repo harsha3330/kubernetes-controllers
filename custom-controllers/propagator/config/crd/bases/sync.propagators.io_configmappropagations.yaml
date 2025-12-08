@@ -15,18 +15,23 @@ spec:
     kind: ConfigMapPropagation
     listKind: ConfigMapPropagationList
     plural: configmappropagations
+    shortNames:
+    - cmp
     singular: configmappropagation
-  scope: Namespaced
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.source.name
-      name: Source
+    - jsonPath: .spec.source.namespace
+      name: SourceNamespace
       type: string
-    - jsonPath: .status.conditions[?(@.type=="Ready")].reason
-      name: Status
+    - jsonPath: .spec.source.name
+      name: SourceName
+      type: string
+    - jsonPath: .spec.syncmode
+      name: SyncMode
       type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
-      name: Ready
+      name: Status
       type: string
     name: v1alpha1
     schema:
@@ -268,6 +273,10 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              lastSuccessfuleSync:
+                description: Will be used with createonce for one successfule sync
+                format: date-time
+                type: string
               lastSyncedAt:
                 description: |-
                   LastSyncedAt is the timestamp of the most recent reconciliation attempt
