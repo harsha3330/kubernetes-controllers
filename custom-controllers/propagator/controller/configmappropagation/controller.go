@@ -91,8 +91,8 @@ func (r *ConfigMapPropagationReconciler) Reconcile(ctx context.Context, req ctrl
 	}
 
 	// Need to check if we should go forward or not (and need to add a logic based on policy to decide to go forward or not)
-	if configmapPropagator.Status.ObservedGeneration == configmapPropagator.Generation {
-		return ctrl.Result{}, err
+	if !shouldRefresh(&configmapPropagator) {
+		return r.getRequeueResult(&configmapPropagator), nil
 	}
 
 	// Check for intial ConfigMap
@@ -108,6 +108,42 @@ func (r *ConfigMapPropagationReconciler) Reconcile(ctx context.Context, req ctrl
 	}
 
 	return r.SyncTargets(ctx, &configmapPropagator)
+}
+
+func shouldRefresh(configmapPropagation *syncv1alpha1.ConfigMapPropagation) bool {
+	switch configmapPropagation.Spec.SyncMode {
+	case syncv1alpha1.SyncModeCreatedOnce:
+		if configmapPropagation.Status.SyncedResourceVersion == "" || !configmapPropagation.Status.LastSuccessfulSync.IsZero() {
+			return true
+		}
+		return false
+	case syncv1alpha1.SyncModeOnChange:
+		if configmapPropagation.Status.SyncedResourceVersion == "" || configmapPropagation.Status.SyncedResourceVersion != configmapPropagation.ResourceVersion {
+			return true
+		}
+		return false
+	case syncv1alpha1.SyncModePeriodic:
+		if configmapPropagation.Status.SyncedResourceVersion == "" || configmapPropagation.Status.SyncedResourceVersion != configmapPropagation.ResourceVersion {
+			return true
+		}
+		return configmapPropagation.Status.LastSyncedAt.Add(configmapPropagation.Spec.SyncInterval.Duration).Before(time.Now())
+	default:
+		return false
+	}
+}
+
+func (r *ConfigMapPropagationReconciler) getRequeueResult(configmapPropagation *syncv1alpha1.ConfigMapPropagation) ctrl.Result {
+	if configmapPropagation.Spec.SyncMode == syncv1alpha1.SyncModePeriodic || configmapPropagation.Spec.SyncMode == syncv1alpha1.SyncModeOnChange {
+		return ctrl.Result{}
+	}
+	timeSinceLastSync, refreshInterval := time.Since(configmapPropagation.Status.LastSyncedAt.Time), configmapPropagation.Spec.SyncInterval.Duration
+	if timeSinceLastSync < 0 {
+		return ctrl.Result{Requeue: true}
+	}
+	if timeSinceLastSync < refreshInterval {
+		return ctrl.Result{RequeueAfter: refreshInterval - timeSinceLastSync}
+	}
+	return ctrl.Result{}
 }
 
 // SetupWithManager sets up the controller with the Manager.

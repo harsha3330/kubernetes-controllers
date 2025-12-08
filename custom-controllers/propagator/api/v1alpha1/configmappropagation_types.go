@@ -211,10 +211,10 @@ type ConfigMapPropagationStatus struct {
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	// ObservedGeneration is the metadata.generation that the controller
+	// SyncedResourceVersion is the metadata.generation that the controller
 	// has last fully reconciled. Ensures users know the Status reflects
 	// the latest Spec.
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	SyncedResourceVersion string `json:"syncedResourceVersion,omitempty"`
 
 	// LastSyncedAt is the timestamp of the most recent reconciliation attempt
 	// (successful or failed). Useful for knowing controller liveness.

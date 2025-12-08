@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	syncv1alpha1 "github.com/harsha3330/kubernetes/custom-controllers/propagator/api/v1alpha1"
-	cmpcontroller "github.com/harsha3330/kubernetes/custom-controllers/propagator/internal/controller/configmappropagation"
+	cmpcontroller "github.com/harsha3330/kubernetes/custom-controllers/propagator/controller/configmappropagation"
 	// +kubebuilder:scaffold:imports
 )
 

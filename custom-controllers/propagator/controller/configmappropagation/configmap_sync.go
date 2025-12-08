@@ -127,7 +127,6 @@ func (r *ConfigMapPropagationReconciler) SyncTargets(ctx context.Context, config
 	updateCmp.Status.TargetsSummary = targetSummary
 	updateCmp.Status.TargetStatuses = targetStatuses
 	updateCmp.Status.LastSyncedAt = metav1.NewTime(time.Now())
-	updateCmp.Status.ObservedGeneration = configmapPropagator.Generation
 	if targetSummary.Failed > 0 {
 		failedParts := make([]string, 0, len(targetStatuses))
 		for _, t := range targetStatuses {
@@ -140,6 +139,7 @@ func (r *ConfigMapPropagationReconciler) SyncTargets(ctx context.Context, config
 			Message: fmt.Sprintf("Sync Failed for: %s", strings.Join(failedParts, ",")),
 		})
 	} else {
+		updateCmp.Status.SyncedResourceVersion = configmapPropagator.ResourceVersion
 		meta.SetStatusCondition(&updateCmp.Status.Conditions, metav1.Condition{
 			Type:    "Ready",
 			Status:  metav1.ConditionTrue,

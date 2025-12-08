@@ -283,13 +283,12 @@ spec:
                   (successful or failed). Useful for knowing controller liveness.
                 format: date-time
                 type: string
-              observedGeneration:
+              syncedResourceVersion:
                 description: |-
-                  ObservedGeneration is the metadata.generation that the controller
+                  SyncedResourceVersion is the metadata.generation that the controller
                   has last fully reconciled. Ensures users know the Status reflects
                   the latest Spec.
-                format: int64
-                type: integer
+                type: string
               targetStatuses:
                 description: |-
                   TargetStatuses contains detailed per-target records ONLY for targets that
