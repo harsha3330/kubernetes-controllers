@@ -220,6 +220,9 @@ type ConfigMapPropagationStatus struct {
 	// (successful or failed). Useful for knowing controller liveness.
 	LastSyncedAt metav1.Time `json:"lastSyncedAt,omitempty"`
 
+	// Will be used with createonce for one successfule sync
+	LastSuccessfulSync metav1.Time `json:"lastSuccessfuleSync,omitempty"`
+
 	// TargetsSummary gives a compressed overview of how many targets succeeded
 	// or failed during reconciliation.
 	TargetsSummary TargetsSummary `json:"targetsSummary,omitempty"`
@@ -233,11 +236,12 @@ type ConfigMapPropagationStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:metadata:labels="propagators.io/component=controller"
-// +kubebuilder:resource:scope=Namespaced,categories={propagators}
-// +kubebuilder:printcolumn:name="Source",type=string,JSONPath=`.spec.source.name`
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].reason`
-// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
+// +kubebuilder:metadata:labels=propagators.io/component=controller
+// +kubebuilder:resource:scope=Cluster,categories={propagators},shortName=cmp
+// +kubebuilder:printcolumn:name="SourceNamespace",type="string",JSONPath=".spec.source.namespace"
+// +kubebuilder:printcolumn:name="SourceName",type="string",JSONPath=".spec.source.name"
+// +kubebuilder:printcolumn:name="SyncMode",type="string",JSONPath=".spec.syncmode"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status"
 // +kubebuilder:selectablefield:JSONPath=`.spec.source.name`
 // +kubebuilder:selectablefield:JSONPath=`.spec.source.namespace`
 // ConfigMapPropagation is the Schema for the configmappropagations API

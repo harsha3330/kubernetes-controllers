@@ -23,7 +23,6 @@ import (
 
 	syncv1alpha1 "github.com/harsha3330/kubernetes/custom-controllers/propagator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -65,10 +64,6 @@ func (r *ConfigMapPropagationReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, err
 	}
 
-	if configmapPropagator.Status.ObservedGeneration == configmapPropagator.Generation {
-		return ctrl.Result{}, err
-	}
-
 	log.Info("spec of configmap propagator", "cr spec", configmapPropagator.Spec)
 
 	// Checking for Deletion Timestamp and deleting the cr if present
@@ -95,8 +90,13 @@ func (r *ConfigMapPropagationReconciler) Reconcile(ctx context.Context, req ctrl
 		}
 	}
 
+	// Need to check if we should go forward or not (and need to add a logic based on policy to decide to go forward or not)
+	if configmapPropagator.Status.ObservedGeneration == configmapPropagator.Generation {
+		return ctrl.Result{}, err
+	}
+
 	// Check for intial ConfigMap
-	var sourceConfig v1.ConfigMap
+	var sourceConfig corev1.ConfigMap
 	err = r.Client.Get(ctx, types.NamespacedName{
 		Name:      configmapPropagator.Spec.Source.Name,
 		Namespace: configmapPropagator.Spec.Source.Namespace,
