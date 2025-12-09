@@ -1,8 +1,7 @@
 apiVersion: sync.propagators.io/v1alpha1
 kind: ConfigMapPropagation
 metadata:
-  name: propagate-configmap
-  namespace: default
+  name: propagation-example
 spec:
   createIfMissing: true
   source:
@@ -14,10 +13,11 @@ spec:
   deletionPolicy: Delete
   allowSystemNamespaces: true
   targets:
-    - namespace: dev
+    - namespace: namespace-1
       name: example-configmap
-    - namespace: staging
+    - namespace: namespace-2
       name: example-configmap
-    - namespace: prod
+    - namespace: namespace-3
       name: example-configmap
+    - namespace: kube-system
 

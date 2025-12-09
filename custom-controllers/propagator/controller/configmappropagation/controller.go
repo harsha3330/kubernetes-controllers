@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	syncv1alpha1 "github.com/harsha3330/kubernetes/custom-controllers/propagator/api/v1alpha1"
@@ -69,18 +70,17 @@ func (r *ConfigMapPropagationReconciler) Reconcile(ctx context.Context, req ctrl
 	// Checking for Deletion Timestamp and deleting the cr if present
 	if !configmapPropagator.DeletionTimestamp.IsZero() {
 		err := r.HandleDelete(ctx, &configmapPropagator)
-		r.Recorder.Eventf(&configmapPropagator, corev1.EventTypeWarning, "Delete Failed", "%v", err)
 		if err != nil {
+			r.Recorder.Eventf(&configmapPropagator, corev1.EventTypeWarning, "Delete Failed", "%v", err)
 			if errors.Is(err, ErrDeletingTargets) {
 				return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 			}
-
 			return ctrl.Result{}, err
 		}
+		log.Info("deleted the configmap propagator")
 		return ctrl.Result{}, nil
 	}
 
-	log.Info("Adding the Finalizer for configmap propagator")
 	// Add finalizer if it doesn't exist
 	if !controllerutil.ContainsFinalizer(&configmapPropagator, FinalizerName) {
 		controllerutil.AddFinalizer(&configmapPropagator, FinalizerName)
@@ -113,17 +113,19 @@ func (r *ConfigMapPropagationReconciler) Reconcile(ctx context.Context, req ctrl
 func shouldRefresh(configmapPropagation *syncv1alpha1.ConfigMapPropagation) bool {
 	switch configmapPropagation.Spec.SyncMode {
 	case syncv1alpha1.SyncModeCreatedOnce:
-		if configmapPropagation.Status.SyncedResourceVersion == "" || !configmapPropagation.Status.LastSuccessfulSync.IsZero() {
+		if configmapPropagation.Status.SyncedGeneration == "" || configmapPropagation.Status.LastSuccessfulSync.IsZero() {
 			return true
 		}
 		return false
 	case syncv1alpha1.SyncModeOnChange:
-		if configmapPropagation.Status.SyncedResourceVersion == "" || configmapPropagation.Status.SyncedResourceVersion != configmapPropagation.ResourceVersion {
+		expected := fmt.Sprintf("%d", configmapPropagation.Generation)
+		if configmapPropagation.Status.SyncedGeneration == "" || configmapPropagation.Status.SyncedGeneration != expected {
 			return true
 		}
 		return false
 	case syncv1alpha1.SyncModePeriodic:
-		if configmapPropagation.Status.SyncedResourceVersion == "" || configmapPropagation.Status.SyncedResourceVersion != configmapPropagation.ResourceVersion {
+		expected := fmt.Sprintf("%d", configmapPropagation.Generation)
+		if configmapPropagation.Status.SyncedGeneration == "" || configmapPropagation.Status.SyncedGeneration != expected {
 			return true
 		}
 		return configmapPropagation.Status.LastSyncedAt.Add(configmapPropagation.Spec.SyncInterval.Duration).Before(time.Now())

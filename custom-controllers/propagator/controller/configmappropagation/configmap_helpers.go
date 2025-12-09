@@ -21,7 +21,7 @@ func (r *ConfigMapPropagationReconciler) ensureConfigMap(ctx context.Context, cm
 		if cm.Labels == nil {
 			cm.Labels = map[string]string{}
 		}
-		ownerLabelVal := fmt.Sprintf("%s.%s", cmp.Namespace, cmp.Name)
+		ownerLabelVal := cmp.Name
 		if cm.Labels[OwnerLabelKey] != ownerLabelVal {
 			cm.Labels[OwnerLabelKey] = ownerLabelVal
 			patched = true
@@ -63,7 +63,7 @@ func (r *ConfigMapPropagationReconciler) ensureConfigMap(ctx context.Context, cm
 			Name:      t.ConfigmapName,
 			Namespace: t.Namespace,
 			Labels: map[string]string{
-				OwnerLabelKey:     fmt.Sprintf("%s.%s", cmp.Namespace, cmp.Name),
+				OwnerLabelKey:     cmp.Name,
 				ManagedByLabelKey: ManagedByLabelValue,
 			},
 			Annotations: map[string]string{
@@ -145,7 +145,7 @@ func (r *ConfigMapPropagationReconciler) orphanConfigMap(ctx context.Context, cm
 	changed := false
 	if cm.Labels != nil {
 		if lbl, ok := cm.Labels[OwnerLabelKey]; ok {
-			expected := fmt.Sprintf("%s.%s", cmp.Namespace, cmp.Name)
+			expected := cmp.Name
 			if lbl == expected {
 				delete(cm.Labels, OwnerLabelKey)
 				changed = true

@@ -211,10 +211,10 @@ type ConfigMapPropagationStatus struct {
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	// SyncedResourceVersion is the metadata.generation that the controller
+	// SyncedGeneration is the metadata.generation that the controller
 	// has last fully reconciled. Ensures users know the Status reflects
 	// the latest Spec.
-	SyncedResourceVersion string `json:"syncedResourceVersion,omitempty"`
+	SyncedGeneration string `json:"syncedGeneration,omitempty"`
 
 	// LastSyncedAt is the timestamp of the most recent reconciliation attempt
 	// (successful or failed). Useful for knowing controller liveness.
@@ -240,7 +240,7 @@ type ConfigMapPropagationStatus struct {
 // +kubebuilder:resource:scope=Cluster,categories={propagators},shortName=cmp
 // +kubebuilder:printcolumn:name="SourceNamespace",type="string",JSONPath=".spec.source.namespace"
 // +kubebuilder:printcolumn:name="SourceName",type="string",JSONPath=".spec.source.name"
-// +kubebuilder:printcolumn:name="SyncMode",type="string",JSONPath=".spec.syncmode"
+// +kubebuilder:printcolumn:name="SyncMode",type="string",JSONPath=".spec.syncMode"
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status"
 // +kubebuilder:selectablefield:JSONPath=`.spec.source.name`
 // +kubebuilder:selectablefield:JSONPath=`.spec.source.namespace`

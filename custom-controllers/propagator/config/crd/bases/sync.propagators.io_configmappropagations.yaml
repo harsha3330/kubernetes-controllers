@@ -27,7 +27,7 @@ spec:
     - jsonPath: .spec.source.name
       name: SourceName
       type: string
-    - jsonPath: .spec.syncmode
+    - jsonPath: .spec.syncMode
       name: SyncMode
       type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
@@ -283,9 +283,9 @@ spec:
                   (successful or failed). Useful for knowing controller liveness.
                 format: date-time
                 type: string
-              syncedResourceVersion:
+              syncedGeneration:
                 description: |-
-                  SyncedResourceVersion is the metadata.generation that the controller
+                  SyncedGeneration is the metadata.generation that the controller
                   has last fully reconciled. Ensures users know the Status reflects
                   the latest Spec.
                 type: string
